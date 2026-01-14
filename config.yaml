@@ -1,0 +1,47 @@
+llm_providers:
+  nvidia:
+    enabled: true
+    api_key: "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"
+    base_url: "https://integrate.api.nvidia.com/v1"
+    model: "nvidia/nemotron-3-nano-30b-a3b"
+    default: true
+    streaming: true
+    reasoning_budget: 16384
+    enable_thinking: true
+  
+  gemini:
+    enabled: false
+    api_key: "AIzaSyCxEpbf2wjbq0jy861i-CoMKhzBFz0Fc7Q"
+    model: "gemini-2.0-flash-exp"
+    default: false
+  
+  azure_openai:
+    enabled: false
+    api_key: ""
+    endpoint: ""
+    deployment_name: ""
+    api_version: "2024-02-01"
+
+agent:
+  name: "SimplifiedAgent"
+  max_iterations: 10
+  temperature: 1.0
+  top_p: 1.0
+  max_tokens: 16384
+
+observability:
+  logging:
+    enabled: true
+    level: "INFO"
+    format: "detailed"
+    file: "logs/agent.log"
+  
+  tracing:
+    enabled: true
+    trace_calls: true
+    trace_responses: true
+  
+  metrics:
+    enabled: true
+    track_latency: true
+    track_token_usage: true

@@ -1,0 +1,8 @@
+# Agent System Dependencies
+pyyaml>=6.0.1
+openai>=1.0.0
+google-genai>=0.2.0
+flask>=3.0.0
+flask-cors>=4.0.0
+tinydb>=4.8.0
+python-dateutil>=2.8.2

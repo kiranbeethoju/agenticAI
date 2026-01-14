@@ -1,0 +1,368 @@
+/* Global Scroll Fix */
+body,
+html {
+    overflow-y: auto !important;
+    height: 100% !important;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+#app-container {
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Workflow Builder Scroll Fix */
+#workflow-builder {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+#steps-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding-bottom: 200px !important;
+    padding-right: 10px;
+}
+
+/* Sidebar Toggle & Collapse Logic */
+.flow-lib-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--glass-border);
+    white-space: nowrap;
+    overflow: hidden;
+    height: 52px;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    min-width: 28px;
+    min-height: 28px;
+}
+
+/* Sidebar Layout Transitions */
+.workstation-grid.workflow-mode {
+    grid-template-columns: auto minmax(400px, 1fr) 1.5fr !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 0 !important;
+    /* Remove gap for a seamless look when collapsed */
+}
+
+.library-panel {
+    width: 260px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Collapsed State */
+.library-panel.collapsed {
+    width: 60px !important;
+}
+
+.library-panel.collapsed .flow-lib-header {
+    padding: 10px;
+    justify-content: center;
+}
+
+.library-panel.collapsed .flow-lib-header span,
+.library-panel.collapsed .flow-lib-header>div {
+    display: none !important;
+}
+
+.library-panel.collapsed .toggle-btn i {
+    transform: rotate(180deg) !important;
+}
+
+.library-panel.collapsed #flows-list,
+.library-panel.collapsed .search-box {
+    display: none !important;
+}
+
+/* Maximized Card Overlay */
+.step-card.maximized {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 999999 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #0b0f1a !important;
+    /* Deeper, solid background for modal */
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+}
+
+.step-card.maximized .step-card-header {
+    padding: 20px 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Close button specifically for maximized state */
+.close-modal {
+    background: var(--primary) !important;
+    color: white !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.5);
+    transition: all 0.2s;
+}
+
+.close-modal:hover {
+    transform: scale(1.1);
+    background: white !important;
+    color: var(--primary) !important;
+}
+
+.step-card.maximized .step-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 40px;
+    overflow: hidden;
+}
+
+/* Hide close modal button by default (only show when maximized) */
+.close-modal {
+    display: none !important;
+}
+
+.step-card.maximized .close-modal {
+    display: flex !important;
+}
+
+.step-card.maximized textarea {
+    flex: 1;
+    min-height: 0;
+    max-height: none !important;
+    font-size: 1.4rem !important;
+    line-height: 1.6;
+    background: rgba(0, 0, 0, 0.3) !important;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--primary);
+    color: white !important;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Hide normal maximize button when already maximized */
+.step-card.maximized .maximize-btn {
+    display: none !important;
+}
+
+/* Hide other controls that don't make sense in maximized view */
+.step-card.maximized .parallel-toggle,
+.step-card.maximized .step-reorder {
+    display: none !important;
+}
+
+/* History Scroll Fix */
+.history-list {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto !important;
+    padding-right: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Observability Traces Scroll */
+.traces-list {
+    max-height: 500px;
+    overflow-y: auto !important;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+/* Global scrollbar style */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Trace Item Styling */
+.trace-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid #64748b;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: transform 0.2s;
+}
+
+.trace-item:hover {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.trace-item.trace-call {
+    border-left-color: var(--primary);
+}
+
+.trace-item.trace-resp {
+    border-left-color: #10b981;
+}
+
+.trace-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 5px;
+}
+
+.trace-time {
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 0.75rem;
+}
+
+.trace-comp {
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.trace-type {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.trace-detail {
+    word-break: break-word;
+    color: #94a3b8;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+.empty-msg {
+    text-align: center;
+    padding: 60px;
+    opacity: 0.4;
+    font-style: italic;
+}
+
+/* History details expansion style */
+details.h-details>summary {
+    list-style: none;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    padding: 8px;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+details.h-details>summary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+}
+
+details.h-details[open]>summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Icon Button Styles */
+.icon-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.icon-btn:hover {
+    background: rgba(var(--primary-rgb), 0.2);
+    color: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.icon-btn.small {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.icon-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+.step-ctrls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step-reorder {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid var(--glass-border);
+}

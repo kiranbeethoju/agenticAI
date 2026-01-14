@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Agent System | Premium AI Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/history_details.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout_fixes.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+
+<body class="dark-mode">
+    <div id="auth-overlay" class="overlay">
+        <div class="auth-card">
+            <div class="brand">
+                <div class="logo-icon"><i data-lucide="shield-check"></i></div>
+                <h1>Secure Access</h1>
+                <p>Please enter your credentials to initialize the agent.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="tab-btn active" data-provider="nvidia">NVIDIA API</button>
+                <button class="tab-btn" data-provider="gemini">Google Gemini</button>
+            </div>
+
+            <div class="form-container">
+                <div id="nvidia-fields" class="provider-fields active">
+                    <div class="input-group">
+                        <label>NVIDIA API Key</label>
+                        <input type="password" id="nvidia-api-key" placeholder="nvapi-z-..." class="glass-input"
+                            value="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">
+                    </div>
+                    <div class="input-group">
+                        <label>Base URL (Default NVIDIA)</label>
+                        <input type="text" id="nvidia-base-url" value="https://integrate.api.nvidia.com/v1"
+                            class="glass-input">
+                    </div>
+                </div>
+
+                <div id="gemini-fields" class="provider-fields">
+                    <div class="input-group">
+                        <label>Gemini API Key</label>
+                        <input type="password" id="gemini-api-key" placeholder="AIzaSy..." class="glass-input">
+                    </div>
+                </div>
+
+                <button id="validate-btn" class="primary-btn">
+                    <span>Initialize Agent</span>
+                    <i data-lucide="arrow-right"></i>
+                </button>
+
+                <p id="auth-error" class="error-msg"></p>
+            </div>
+        </div>
+    </div>
+
+    <main id="app-container" class="hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon-small"><i data-lucide="shield-check"></i></div>
+                    <span>AgentOS</span>
+                </div>
+            </div>
+
+            <div class="project-info">
+                <p class="label">Project</p>
+                <p id="current-project" class="value">NVIDIA GenAI Task</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="workstation">
+                    <i data-lucide="layout"></i>
+                    <span>Workstation</span>
+                </button>
+                <button class="nav-item" data-view="history">
+                    <i data-lucide="history"></i>
+                    <span>Task History</span>
+                </button>
+                <button class="nav-item" data-view="observability">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Telemetry</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <i data-lucide="log-out"></i>
+                    <span>Terminate Session</span>
+                </button>
+            </div>
+        </aside>
+
+        <section class="main-content">
+            <!-- Workstation View -->
+            <div id="workstation-view" class="view active">
+                <header class="content-header">
+                    <div class="title-group">
+                        <h2>Agent Workstation</h2>
+                        <p>Execute and monitor agentic workflows</p>
+                    </div>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="general">General</button>
+                        <button class="mode-btn" data-mode="workflow">Workflow Studio</button>
+                    </div>
+                </header>
+
+                <div class="workstation-grid" id="main-grid">
+                    <!-- Workflow Library Sidebar (Hidden by default) -->
+                    <div id="flow-library" class="library-panel hidden">
+                        <div class="panel-header flow-lib-header">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i data-lucide="library"></i>
+                                <span>Flow Library</span>
+                            </div>
+                            <button class="toggle-btn"
+                                onclick="document.getElementById('flow-library').classList.toggle('collapsed')">
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                        </div>
+                        <div id="flows-list" class="flows-list">
+                            <!-- Saved flows go here -->
+                        </div>
+                    </div>
+
+                    <!-- Workflow Builder Overlay -->
+                    <div id="workflow-builder" class="builder-panel hidden">
+                        <div class="builder-header">
+                            <div class="builder-title-group">
+                                <div class="flow-name-wrapper">
+                                    <input type="text" id="flow-name" value="New Workflow" class="flow-name-input">
+                                </div>
+                                <div class="flow-config-toggle" onclick="toggleFlowConfig()">
+                                    <i data-lucide="settings"></i> Config
+                                </div>
+                            </div>
+                            <div class="builder-actions">
+                                <button id="add-step-btn" class="icon-btn"><i data-lucide="plus-circle"></i> Add
+                                    Step</button>
+                                <button id="save-flow-btn" class="icon-btn success"><i data-lucide="save"></i>
+                                    Save</button>
+                                <button id="run-flow-btn" class="icon-btn primary"><i data-lucide="play"></i>
+                                    Run</button>
+                                <button id="export-flow-btn" class="icon-btn"><i data-lucide="download"></i>
+                                    Export</button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Configuration Section -->
+                        <div id="flow-config-panel" class="flow-config-panel hidden">
+                            <div class="config-grid">
+                                <div class="config-item model-input">
+                                    <label>Model</label>
+                                    <input type="text" id="flow-model" placeholder="Model name...">
+                                </div>
+                                <div class="config-item wide">
+                                    <label>API Key (Optional Override)</label>
+                                    <input type="password" id="flow-api-key"
+                                        placeholder="Enter session key override...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="steps-container" class="steps-container">
+                            <!-- Dynamic Steps -->
+                        </div>
+                    </div>
+
+                    <div class="execution-panel">
+                        <div class="panel-header">
+                            <i data-lucide="terminal"></i>
+                            <span>Execution Log</span>
+                        </div>
+                        <div id="chat-messages" class="chat-messages"></div>
+
+                        <div class="input-area">
+                            <div id="thinking-indicator" class="thinking-box hidden">
+                                <div class="thinking-header">
+                                    <span class="pulse mini"></span>
+                                    <span>Agent Internal Reasoning...</span>
+                                </div>
+                                <div id="thinking-content" class="thinking-text"></div>
+                            </div>
+                            <form id="chat-form" class="input-wrapper">
+                                <textarea id="message-input" placeholder="Define a task for the agent..."
+                                    rows="1"></textarea>
+                                <button type="submit" id="send-btn" class="send-btn">
+                                    <i data-lucide="play"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <aside class="control-panel">
+                        <div class="workflow-steps">
+                            <h3>Workflow Status</h3>
+                            <div class="step-item" id="step-plan">
+                                <span class="step-num">1</span>
+                                <div class="step-info">
+                                    <h4>Planning</h4>
+                                    <p>Analyzing task & dependencies</p>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-exec">
+                                <span class="step-num">2</span>
+                                <div class="step-info">
+                                    <h4>Execution</h4>
+                                    <p>Processing payload</p>
+                                </div>
+                            </div>
+                            <div class="step-item" id="step-comp">
+                                <span class="step-num">3</span>
+                                <div class="step-info">
+                                    <h4>Completion</h4>
+                                    <p>Verifying output</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="telemetry-compact">
+                            <h3>Real-time Metrics</h3>
+                            <div class="t-item">
+                                <span>Provider:</span>
+                                <span id="tele-provider" class="highlight">NVIDIA</span>
+                            </div>
+                            <div class="t-item">
+                                <span>Latency:</span>
+                                <span id="tele-latency">0.0s</span>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div id="history-view" class="view">
+                <header class="content-header">
+                    <h2>Conversation History</h2>
+                </header>
+                <div id="history-list" class="history-list">
+                    <!-- History items will be injected here -->
+                </div>
+            </div>
+
+            <!-- Observability View -->
+            <div id="observability-view" class="view">
+                <header class="content-header">
+                    <h2>Observability & Metrics</h2>
+                </header>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon"><i data-lucide="clock"></i></div>
+                        <div class="metric-info">
+                            <p class="m-label">Avg. Latency</p>
+                            <h3 id="m-avg-latency">0.0s</h3>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i data-lucide="message-circle"></i></div>
+                        <div class="metric-info">
+                            <p class="m-label">Total Requests</p>
+                            <h3 id="m-total-requests">0</h3>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><i data-lucide="cpu"></i></div>
+                        <div class="metric-info">
+                            <p class="m-label">Provider</p>
+                            <h3 id="m-provider">NVIDIA</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="traces-container">
+                    <h3>Recent Traces</h3>
+                    <div id="traces-list" class="traces-list">
+                        <!-- Traces will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

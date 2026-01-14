@@ -1,0 +1,36 @@
+2026-01-11 14:57:25 - AgentObserver - INFO - Agent initialization started
+2026-01-11 14:57:25 - AgentObserver - INFO - Gemini client initialized successfully
+2026-01-11 14:57:25 - AgentObserver - INFO - Provider 'gemini' initialized successfully
+2026-01-11 14:57:25 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 14:57:25 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 14:57:25 - AgentObserver - ERROR - Gemini generation failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-exp\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash-exp\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash-exp\nPlease retry in 34.296765315s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash-exp'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash-exp'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash-exp', 'location': 'global'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '34s'}]}}
+2026-01-11 15:07:36 - AgentObserver - INFO - Agent initialization started
+2026-01-11 15:07:36 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 15:07:36 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 15:07:36 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 15:07:36 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 15:08:21 - AgentObserver - INFO - Agent initialization started
+2026-01-11 15:08:21 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 15:08:21 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 15:08:21 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 15:08:21 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 15:08:22 - AgentObserver - INFO - Agent initialization started
+2026-01-11 15:08:22 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 15:08:22 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 15:08:22 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 15:08:22 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 15:08:42 - AgentObserver - INFO - Agent initialization started
+2026-01-11 15:08:42 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 15:08:42 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 15:08:42 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 15:08:42 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 16:49:03 - AgentObserver - INFO - Agent initialization started
+2026-01-11 16:49:03 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 16:49:03 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 16:49:03 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 16:49:03 - AgentObserver - INFO - Generating response (iteration 1)
+2026-01-11 17:06:24 - AgentObserver - INFO - Agent initialization started
+2026-01-11 17:06:24 - AgentObserver - INFO - NVIDIA client initialized successfully
+2026-01-11 17:06:24 - AgentObserver - INFO - Provider 'nvidia' initialized successfully
+2026-01-11 17:06:24 - AgentObserver - INFO - Agent initialization completed
+2026-01-11 17:06:24 - AgentObserver - INFO - Generating response (iteration 1)
