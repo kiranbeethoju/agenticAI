@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Management - Agent System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/layout_fixes.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .database-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        .db-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .db-header h1 {
+            margin: 0 0 8px 0;
+            font-size: 2em;
+            font-weight: 700;
+        }
+        
+        .db-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1em;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .db-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-card h3 {
+            margin: 0 0 12px 0;
+            color: #a78bfa;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85em;
+        }
+        
+        .info-value {
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .tables-section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .table-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .table-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            border-color: rgba(167, 139, 250, 0.5);
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .table-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #a78bfa;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .record-count {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .table-description {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 12px;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+        
+        .table-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .column-tag {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        .data-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            position: relative;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 12px;
+            margin: 30px auto;
+            padding: 0;
+            width: 95%;
+            max-width: 1000px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            color: white;
+            font-size: 1.3em;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .modal-body {
+            padding: 15px 20px;
+            max-height: calc(85vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        
+        .data-table th {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(167, 139, 250, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 0.85em;
+        }
+        
+        .data-table td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.9);
+            vertical-align: top;
+            font-size: 0.85em;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .json-cell {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8em;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .nav-link {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            z-index: 100;
+            font-size: 0.9em;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .refresh-btn {
+            background: rgba(167, 139, 250, 0.2);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            color: #a78bfa;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(167, 139, 250, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .stats-summary {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            background: rgba(167, 139, 250, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(167, 139, 250, 0.2);
+        }
+        
+        .stat-label {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 2px;
+        }
+        
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+    </style>
+</head>
+<body>
+    <div class="database-container">
+        <a href="/" class="nav-link">
+            <i data-lucide="arrow-left"></i>
+            Back to Main
+        </a>
+        
+        <div class="db-header">
+            <h1>Database Management</h1>
+            <p>Apache Cassandra - Agent System Database</p>
+            <div class="connection-status">
+                <div class="status-indicator"></div>
+                <span id="connection-status">Connected</span>
+                <button class="refresh-btn" onclick="refreshDatabaseInfo()">
+                    <i data-lucide="refresh-cw"></i>
+                    Refresh
+                </button>
+            </div>
+            <div class="stats-summary" id="stats-summary">
+                <!-- Stats will be populated here -->
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i>
+            Loading database information...
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div id="db-content" style="display: none;">
+            <div class="db-info-grid">
+                <div class="info-card">
+                    <h3><i data-lucide="database"></i> Connection</h3>
+                    <div class="info-item">
+                        <span class="info-label">Host</span>
+                        <span class="info-value" id="cluster-host">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Port</span>
+                        <span class="info-value" id="cluster-port">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Keyspace</span>
+                        <span class="info-value" id="cluster-keyspace">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Username</span>
+                        <span class="info-value" id="cluster-username">-</span>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <h3><i data-lucide="bar-chart-2"></i> Statistics</h3>
+                    <div class="info-item">
+                        <span class="info-label">Total Records</span>
+                        <span class="info-value" id="total-records">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Tables</span>
+                        <span class="info-value" id="table-count">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Database Type</span>
+                        <span class="info-value" id="db-type">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status</span>
+                        <span class="info-value" id="db-status">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tables-section">
+                <h2 class="section-title">
+                    <i data-lucide="grid-3x3"></i>
+                    Database Tables
+                </h2>
+                <div class="tables-grid" id="tables-grid">
+                    <!-- Tables will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Modal -->
+    <div id="data-modal" class="data-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i data-lucide="table"></i>
+                    <span id="modal-table-name">Table Data</span>
+                </h3>
+                <button class="close-modal" onclick="closeDataModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="table-data-content">
+                    <!-- Table data will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/app.js"></script>
+    <script>
+        let databaseInfo = null;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            loadDatabaseInfo();
+        });
+        
+        async function loadDatabaseInfo() {
+            try {
+                const response = await fetch('/api/database/info');
+                const data = await response.json();
+                
+                if (data.success) {
+                    databaseInfo = data;
+                    displayDatabaseInfo(data);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('db-content').style.display = 'block';
+                } else {
+                    showError(data.error || 'Failed to load database information');
+                }
+            } catch (error) {
+                showError('Error connecting to database: ' + error.message);
+            }
+        }
+        
+        function displayDatabaseInfo(data) {
+            // Connection info
+            document.getElementById('cluster-host').textContent = data.cluster.contact_points.join(', ');
+            document.getElementById('cluster-port').textContent = data.cluster.port;
+            document.getElementById('cluster-keyspace').textContent = data.cluster.keyspace;
+            document.getElementById('cluster-username').textContent = data.cluster.username;
+            
+            // Statistics
+            document.getElementById('total-records').textContent = data.total_records.toLocaleString();
+            document.getElementById('table-count').textContent = Object.keys(data.tables).length;
+            document.getElementById('db-type').textContent = data.database_type;
+            document.getElementById('db-status').textContent = data.cluster.status;
+            
+            // Stats summary
+            const statsSummary = document.getElementById('stats-summary');
+            statsSummary.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">Total Records</div>
+                    <div class="stat-value">${data.total_records.toLocaleString()}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Active Tables</div>
+                    <div class="stat-value">${Object.keys(data.tables).length}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Database</div>
+                    <div class="stat-value">${data.database_type}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" style="color: #4ade80;">● Online</div>
+                </div>
+            `;
+            
+            // Tables
+            displayTables(data.tables);
+        }
+        
+        function displayTables(tables) {
+            const grid = document.getElementById('tables-grid');
+            grid.innerHTML = '';
+            
+            Object.entries(tables).forEach(([tableName, tableInfo]) => {
+                const card = document.createElement('div');
+                card.className = 'table-card';
+                card.onclick = () => showTableData(tableName);
+                
+                card.innerHTML = `
+                    <div class="table-header">
+                        <div class="table-name">
+                            <i data-lucide="table"></i>
+                            ${tableName}
+                        </div>
+                        <div class="record-count">${tableInfo.count.toLocaleString()} records</div>
+                    </div>
+                    <div class="table-description">${tableInfo.description}</div>
+                    <div class="table-columns">
+                        ${tableInfo.columns.map(col => `<span class="column-tag">${col}</span>`).join('')}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            
+            lucide.createIcons();
+        }
+        
+        async function showTableData(tableName) {
+            try {
+                document.getElementById('modal-table-name').textContent = `${tableName} Data`;
+                document.getElementById('table-data-content').innerHTML = '<div class="loading"><i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Loading table data...</div>';
+                document.getElementById('data-modal').style.display = 'block';
+                
+                const response = await fetch(`/api/database/table/${tableName}?limit=50`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayTableData(tableName, data.data);
+                } else {
+                    document.getElementById('table-data-content').innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('table-data-content').innerHTML = `<div class="error">Error loading table data: ${error.message}</div>`;
+            }
+        }
+        
+        function displayTableData(tableName, data) {
+            if (data.length === 0) {
+                document.getElementById('table-data-content').innerHTML = '<div class="loading">No records found in this table.</div>';
+                return;
+            }
+            
+            const columns = Object.keys(data[0]);
+            let html = `
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 20px;">
+                    Showing ${data.length} of ${data.length} records
+                </p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            ${columns.map(col => `<th>${col}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    let value = row[col];
+                    if (value === null || value === undefined) {
+                        value = '<span style="color: rgba(255, 255, 255, 0.5);">null</span>';
+                    } else if (typeof value === 'object') {
+                        value = `<span class="json-cell" title="${JSON.stringify(value, null, 2)}">${JSON.stringify(value)}</span>`;
+                    } else if (typeof value === 'string' && value.length > 100) {
+                        value = `<span title="${value}">${value.substring(0, 100)}...</span>`;
+                    }
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('table-data-content').innerHTML = html;
+        }
+        
+        function closeDataModal() {
+            document.getElementById('data-modal').style.display = 'none';
+        }
+        
+        function refreshDatabaseInfo() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('db-content').style.display = 'none';
+            loadDatabaseInfo();
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-message').style.display = 'block';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('data-modal');
+            if (event.target === modal) {
+                closeDataModal();
+            }
+        }
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

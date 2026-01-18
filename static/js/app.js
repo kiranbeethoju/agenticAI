@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Lucide icons
     lucide.createIcons();
 
+    // Check for existing session on page load
+    checkExistingSession();
+
     // Elements
     const authOverlay = document.getElementById('auth-overlay');
     const appContainer = document.getElementById('app-container');
@@ -105,6 +108,30 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { authError.textContent = ''; }, 5000);
     }
 
+    // Check for existing session
+    async function checkExistingSession() {
+        try {
+            const response = await fetch('/api/session-check');
+            const data = await response.json();
+            
+            if (data.has_session) {
+                // Session exists, hide auth overlay
+                authOverlay.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                
+                // Update UI with session info
+                if (data.provider) {
+                    const providerElements = document.querySelectorAll('.current-provider');
+                    providerElements.forEach(el => el.textContent = data.provider.toUpperCase());
+                }
+                
+                refreshMetrics();
+            }
+        } catch (error) {
+            console.log('Session check failed, showing login');
+        }
+    }
+
     // --- Chat Functionality ---
 
     // Auto-resize textarea
@@ -116,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMode = 'general';
     let currentFlowId = null;
     let workflowSteps = [
-        { id: 1, name: 'Analysis', prompt: 'Analyze this: {{input}}' },
-        { id: 2, name: 'Detailing', prompt: 'Expand on {{step1}}' }
+        { id: 1, name: 'Analysis', prompt: 'Analyze this: {{input}}', enable_llm: true, enable_tool: false, tools: [] },
+        { id: 2, name: 'Detailing', prompt: 'Expand on {{step1}}', enable_llm: true, enable_tool: false, tools: [] }
     ];
 
     // Mode Switching
@@ -167,6 +194,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            if (step.enable_tool) {
+                vars.push('{{tool_input}}');
+                vars.push('{{tool_results}}');
+            }
+
+            const enableLLM = (step.enable_llm === undefined || step.enable_llm === null) ? true : !!step.enable_llm;
+            const enableTool = !!step.enable_tool;
+            const tools = Array.isArray(step.tools) ? step.tools : [];
+            const tool0 = tools[0] || { type: 'google_search', query_template: '{{input}}', max_results: 5 };
+            const toolQuery = tool0.query_template || tool0.query || '{{input}}';
+            const toolMax = (tool0.max_results === undefined || tool0.max_results === null) ? 5 : tool0.max_results;
+
             return `
             <div class="step-card ${step.parallel ? 'parallel-step' : ''}" id="step-card-${step.id}">
                 <div class="step-card-header">
@@ -195,6 +234,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="step-card-body">
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                        <label class="step-toggle ${enableLLM ? 'active' : ''}" title="Enable/Disable LLM call for this step">
+                            <input type="checkbox" ${enableLLM ? 'checked' : ''} onchange="window.toggleEnableLLM(${step.id}, this.checked)">
+                            <i data-lucide="cpu"></i> LLM
+                        </label>
+                        <label class="step-toggle ${enableTool ? 'active' : ''}" title="Enable/Disable tool execution for this step">
+                            <input type="checkbox" ${enableTool ? 'checked' : ''} onchange="window.toggleEnableTool(${step.id}, this.checked)">
+                            <i data-lucide="search"></i> Tool
+                        </label>
+                    </div>
+
+                    ${enableTool ? `
+                        <div style="border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom: 8px;">
+                                <div style="opacity:0.9;">Tool: <strong>GoogleSearch</strong></div>
+                                <div style="opacity:0.6; font-size: 12px;">(via DuckDuckGo)</div>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 110px; gap:10px;">
+                                <input class="glass-input" type="text" value="${toolQuery.replace(/"/g, '&quot;')}" placeholder="Query template (e.g. {{input}})" onchange="window.updateToolQuery(${step.id}, this.value)" />
+                                <input class="glass-input" type="number" min="1" max="10" value="${toolMax}" onchange="window.updateToolMaxResults(${step.id}, this.value)" />
+                            </div>
+                            <div style="opacity:0.6; font-size: 12px; margin-top: 6px;">Tip: Use <code>{{input}}</code>, <code>{{step1}}</code>, or step name variables in the query.</div>
+                        </div>
+                    ` : ''}
+
                     <div class="prompt-label">Prompt Template:</div>
                     <textarea id="prompt-${step.id}" onchange="window.updateStepPrompt(${step.id}, this.value)" placeholder="e.g. Analyze this: {{input}}">${step.prompt}</textarea>
                     
@@ -278,6 +342,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (step) step.prompt = val;
     };
 
+    window.toggleEnableLLM = (id, enabled) => {
+        const step = workflowSteps.find(s => s.id === id);
+        if (!step) return;
+        step.enable_llm = !!enabled;
+        renderWorkflowSteps();
+    };
+
+    window.toggleEnableTool = (id, enabled) => {
+        const step = workflowSteps.find(s => s.id === id);
+        if (!step) return;
+        step.enable_tool = !!enabled;
+        if (step.enable_tool) {
+            if (!Array.isArray(step.tools) || step.tools.length === 0) {
+                step.tools = [{ type: 'google_search', query_template: '{{input}}', max_results: 5 }];
+            } else {
+                step.tools = step.tools.map((t, i) => i === 0 ? ({
+                    type: (t.type || 'google_search'),
+                    query_template: t.query_template || t.query || '{{input}}',
+                    max_results: (t.max_results === undefined || t.max_results === null) ? 5 : t.max_results
+                }) : t);
+            }
+        }
+        renderWorkflowSteps();
+    };
+
+    window.updateToolQuery = (id, val) => {
+        const step = workflowSteps.find(s => s.id === id);
+        if (!step) return;
+        if (!Array.isArray(step.tools) || step.tools.length === 0) {
+            step.tools = [{ type: 'google_search', query_template: '{{input}}', max_results: 5 }];
+        }
+        step.tools[0].type = step.tools[0].type || 'google_search';
+        step.tools[0].query_template = val;
+    };
+
+    window.updateToolMaxResults = (id, val) => {
+        const step = workflowSteps.find(s => s.id === id);
+        if (!step) return;
+        if (!Array.isArray(step.tools) || step.tools.length === 0) {
+            step.tools = [{ type: 'google_search', query_template: '{{input}}', max_results: 5 }];
+        }
+        const n = parseInt(val, 10);
+        step.tools[0].max_results = isNaN(n) ? 5 : Math.max(1, Math.min(n, 10));
+    };
+
     window.removeWorkflowStep = (id) => {
         workflowSteps = workflowSteps.filter(s => s.id !== id);
         renderWorkflowSteps();
@@ -287,7 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
         workflowSteps.push({
             id: Date.now(),
             name: `Step ${workflowSteps.length + 1}`,
-            prompt: 'Process output from previous step...'
+            prompt: 'Process output from previous step...',
+            enable_llm: true,
+            enable_tool: false,
+            tools: []
         });
         renderWorkflowSteps();
     });
@@ -568,6 +680,176 @@ document.addEventListener('DOMContentLoaded', () => {
         window.URL.revokeObjectURL(url);
     });
 
+    // CSV Batch Run
+    let currentCsvUploadId = null;
+    let lastBatchRunId = null;
+
+    const csvFileInput = document.getElementById('csv-file-input');
+    const csvSelectBtn = document.getElementById('csv-select-btn');
+    const csvInputColumn = document.getElementById('csv-input-column');
+    const runCsvBtn = document.getElementById('run-csv-btn');
+    const downloadRunTxtBtn = document.getElementById('download-run-txt-btn');
+
+    if (csvSelectBtn && csvFileInput) {
+        csvSelectBtn.addEventListener('click', () => csvFileInput.click());
+    }
+
+    if (csvFileInput) {
+        csvFileInput.addEventListener('change', async () => {
+            const file = csvFileInput.files && csvFileInput.files[0];
+            if (!file) return;
+
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+
+                const res = await fetch('/api/workflow/csv/preview', {
+                    method: 'POST',
+                    body: fd
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    appendLog('error', data.error || 'CSV preview failed');
+                    return;
+                }
+
+                currentCsvUploadId = data.upload_id;
+                lastBatchRunId = null;
+                if (downloadRunTxtBtn) downloadRunTxtBtn.classList.add('hidden');
+
+                if (csvInputColumn) {
+                    csvInputColumn.innerHTML = (data.columns || []).map(c => `<option value="${c}">${c}</option>`).join('');
+                    csvInputColumn.classList.remove('hidden');
+                }
+                if (runCsvBtn) runCsvBtn.classList.remove('hidden');
+
+                appendLog('system', `CSV uploaded: ${data.filename}. Select input column and run.`);
+            } catch (err) {
+                appendLog('error', 'CSV upload failed: ' + err.message);
+            } finally {
+                lucide.createIcons();
+            }
+        });
+    }
+
+    if (runCsvBtn) {
+        runCsvBtn.addEventListener('click', async () => {
+            if (!currentCsvUploadId) {
+                appendLog('error', 'Please upload a CSV first.');
+                return;
+            }
+            const col = csvInputColumn?.value;
+            if (!col) {
+                appendLog('error', 'Please select a CSV column.');
+                return;
+            }
+
+            try {
+                runCsvBtn.disabled = true;
+                appendLog('system', `Starting CSV batch run using column: ${col}`);
+
+                const payload = {
+                    upload_id: currentCsvUploadId,
+                    input_column: col,
+                    steps: workflowSteps,
+                    flow_id: currentFlowId,
+                    name: document.getElementById('flow-name')?.value || 'Workflow',
+                    config: {
+                        model: (document.getElementById('flow-model')?.value || '').trim(),
+                        api_key: (document.getElementById('flow-api-key')?.value || '').trim()
+                    }
+                };
+
+                const res = await fetch('/api/workflow/batch_execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    appendLog('error', data.error || 'Batch execution failed');
+                    return;
+                }
+
+                lastBatchRunId = data.run_id;
+                if (!currentFlowId && data.workflow_id) currentFlowId = data.workflow_id;
+
+                appendLog('system', `Batch run complete. RunID: ${data.run_id} | Rows processed: ${data.count}`);
+                if (downloadRunTxtBtn) downloadRunTxtBtn.classList.remove('hidden');
+            } catch (err) {
+                appendLog('error', 'Batch execution failed: ' + err.message);
+            } finally {
+                runCsvBtn.disabled = false;
+            }
+        });
+    }
+
+    if (downloadRunTxtBtn) {
+        downloadRunTxtBtn.addEventListener('click', () => {
+            if (!lastBatchRunId) {
+                appendLog('error', 'No batch run available to download yet.');
+                return;
+            }
+            window.location.href = `/api/workflow/run/export_txt?run_id=${encodeURIComponent(lastBatchRunId)}`;
+        });
+    }
+
+    // Import JSON Workflow
+    const jsonImportBtn = document.getElementById('import-json-btn');
+    const jsonImportInput = document.getElementById('json-import-input');
+
+    if (jsonImportBtn && jsonImportInput) {
+        jsonImportBtn.addEventListener('click', () => jsonImportInput.click());
+    }
+
+    if (jsonImportInput) {
+        jsonImportInput.addEventListener('change', async () => {
+            const file = jsonImportInput.files && jsonImportInput.files[0];
+            if (!file) return;
+
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch('/api/workflow/import_json', {
+                    method: 'POST',
+                    body: fd
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    appendLog('error', data.error || 'Import failed');
+                    return;
+                }
+
+                const wf = data.workflow || {};
+                if (!wf.steps || !Array.isArray(wf.steps)) {
+                    appendLog('error', 'Imported JSON does not contain workflow steps.');
+                    return;
+                }
+
+                workflowSteps = JSON.parse(JSON.stringify(wf.steps));
+                renderWorkflowSteps();
+
+                const name = wf.name || wf.workflow_name || 'Imported Workflow';
+                const flowNameInput = document.getElementById('flow-name');
+                if (flowNameInput) flowNameInput.value = name;
+
+                const cfg = wf.config || {};
+                const modelInput = document.getElementById('flow-model');
+                const keyInput = document.getElementById('flow-api-key');
+                if (modelInput && cfg.model !== undefined) modelInput.value = cfg.model || '';
+                if (keyInput && cfg.api_key !== undefined) keyInput.value = cfg.api_key || '';
+
+                currentFlowId = wf.flow_id || null;
+                appendLog('system', `Imported workflow from JSON: ${file.name}`);
+                lucide.createIcons();
+            } catch (err) {
+                appendLog('error', 'Import failed: ' + err.message);
+            } finally {
+                jsonImportInput.value = '';
+            }
+        });
+    }
+
     function setWorkflowStep(step) {
         document.querySelectorAll('.step-item').forEach(s => s.classList.remove('active'));
         if (step) {
@@ -629,8 +911,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Navigation & Dashboard ---
 
     navItems.forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            // Check if it's a database link (external navigation)
+            if (item.tagName === 'A' && item.href) {
+                // Let the browser handle the navigation
+                return;
+            }
+            
             const viewName = item.dataset.view;
+            if (!viewName) return;
+
+            // Update URL without page reload
+            history.pushState({ view: viewName }, '', `#${viewName}`);
 
             navItems.forEach(i => i.classList.remove('active'));
             views.forEach(v => v.classList.remove('active'));
@@ -639,9 +931,148 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`${viewName}-view`).classList.add('active');
 
             if (viewName === 'history') loadHistory();
-            if (viewName === 'observability') refreshMetrics();
+            if (viewName === 'observability') {
+                refreshMetrics();
+                refreshTelemetry();
+            }
         });
     });
+
+    // Batch Jobs (CSV Runs)
+    const batchRunsListEl = document.getElementById('batch-runs-list');
+    const batchRunsLimitEl = document.getElementById('batch-runs-limit');
+    const refreshBatchRunsBtn = document.getElementById('refresh-batch-runs-btn');
+
+    if (batchRunsLimitEl) {
+        batchRunsLimitEl.addEventListener('change', () => refreshBatchRuns());
+    }
+    if (refreshBatchRunsBtn) {
+        refreshBatchRunsBtn.addEventListener('click', () => refreshBatchRuns());
+    }
+
+    async function refreshBatchRuns() {
+        if (!batchRunsListEl) return;
+
+        const limit = batchRunsLimitEl ? batchRunsLimitEl.value : '100';
+        try {
+            const res = await fetch(`/api/workflow/runs?limit=${encodeURIComponent(limit)}`);
+            const data = await res.json();
+            if (!data.success) {
+                batchRunsListEl.innerHTML = `<p class="empty-msg">${escapeHtml(data.error || 'Failed to load batch runs')}</p>`;
+                return;
+            }
+
+            const runs = data.runs || [];
+            if (runs.length === 0) {
+                batchRunsListEl.innerHTML = '<p class="empty-msg">No batch runs recorded yet.</p>';
+                return;
+            }
+
+            batchRunsListEl.innerHTML = runs.map(r => {
+                const ts = r.timestamp ? new Date(r.timestamp).toLocaleString() : '';
+                const wfName = r.workflow_name || 'Workflow';
+                const wfId = r.workflow_id || '';
+                const runId = r.run_id || '';
+                const col = r.input_column || '';
+                const count = (r.count !== undefined && r.count !== null) ? r.count : '';
+
+                return `
+                    <div class="trace-item">
+                        <div class="trace-header">
+                            <span class="trace-time">${escapeHtml(ts)}</span>
+                            <span class="trace-comp">${escapeHtml(wfName)}</span>
+                            <span class="trace-type">RUN</span>
+                        </div>
+                        <div class="trace-detail">RunID: <code>${escapeHtml(runId)}</code> | WorkflowID: <code>${escapeHtml(wfId)}</code>${col ? ` | Column: ${escapeHtml(col)}` : ''}${count !== '' ? ` | Rows: ${escapeHtml(String(count))}` : ''}</div>
+                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                            <button class="icon-btn" onclick="window.downloadBatchRunTxt('${runId}')"><i data-lucide=\"file-text\"></i> Output</button>
+                            <button class="icon-btn" onclick="window.viewBatchRunDetails('${runId}')"><i data-lucide=\"list\"></i> Details</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        } catch (err) {
+            batchRunsListEl.innerHTML = '<p class="empty-msg">Failed to load batch runs.</p>';
+        }
+    }
+
+    window.downloadBatchRunTxt = (runId) => {
+        if (!runId) return;
+        window.location.href = `/api/workflow/run/export_txt?run_id=${encodeURIComponent(runId)}`;
+    };
+
+    window.viewBatchRunDetails = async (runId) => {
+        if (!runId) return;
+        try {
+            const res = await fetch(`/api/workflow/run/details?run_id=${encodeURIComponent(runId)}`);
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.error || 'Failed to load run details');
+                return;
+            }
+            const run = data.run || {};
+            const pretty = JSON.stringify(run, null, 2);
+            alert(pretty);
+        } catch (err) {
+            alert('Failed to load run details');
+        }
+    };
+
+    // Telemetry Table (top 100/200 rows)
+    const telemetryListEl = document.getElementById('telemetry-list');
+    const telemetryLimitEl = document.getElementById('telemetry-limit');
+    const refreshTelemetryBtn = document.getElementById('refresh-telemetry-btn');
+
+    if (telemetryLimitEl) {
+        telemetryLimitEl.addEventListener('change', () => refreshTelemetry());
+    }
+    if (refreshTelemetryBtn) {
+        refreshTelemetryBtn.addEventListener('click', () => refreshTelemetry());
+    }
+
+    async function refreshTelemetry() {
+        if (!telemetryListEl) return;
+
+        const limit = telemetryLimitEl ? telemetryLimitEl.value : '100';
+        try {
+            const res = await fetch(`/api/telemetry?limit=${encodeURIComponent(limit)}`);
+            const data = await res.json();
+            if (!data.success) {
+                telemetryListEl.innerHTML = `<p class="empty-msg">${escapeHtml(data.error || 'Failed to load telemetry')}</p>`;
+                return;
+            }
+
+            const rows = data.rows || [];
+            if (rows.length === 0) {
+                telemetryListEl.innerHTML = '<p class="empty-msg">No telemetry recorded yet.</p>';
+                return;
+            }
+
+            telemetryListEl.innerHTML = rows.map(r => {
+                const time = r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '';
+                const type = (r.type || '').toUpperCase();
+                const component = r.step_name || r.model || r.workflow_id || '';
+                const latency = (typeof r.latency === 'number') ? `${r.latency.toFixed(3)}s` : '';
+                const preview = r.output_preview || r.input_preview || '';
+                return `
+                    <div class="trace-item">
+                        <div class="trace-header">
+                            <span class="trace-time">${escapeHtml(time)}</span>
+                            <span class="trace-comp">${escapeHtml(component)}</span>
+                            <span class="trace-type">${escapeHtml(type)}</span>
+                        </div>
+                        <div class="trace-detail">${latency ? `Latency: ${escapeHtml(latency)} | ` : ''}Preview: ${escapeHtml(String(preview))}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            telemetryListEl.innerHTML = '<p class="empty-msg">Failed to load telemetry.</p>';
+        } finally {
+            lucide.createIcons();
+        }
+    }
 
     async function refreshMetrics() {
         try {
@@ -705,6 +1136,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('history-list');
         list.innerHTML = '<p class="loading">Loading history...</p>';
 
+        // Also refresh batch runs when entering history
+        refreshBatchRuns();
+
         try {
             const response = await fetch('/api/history');
             const data = await response.json();
@@ -713,11 +1147,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.innerHTML = data.history.map(item => {
                     const typeBadge = item.type === 'workflow'
                         ? '<span class="badge detail-badge">WORKFLOW</span>'
-                        : '<span class="badge success-badge">CHAT</span>';
+                        : (item.type === 'tool'
+                            ? '<span class="badge" style="background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.35); color: #ffd700;">TOOL</span>'
+                            : '<span class="badge success-badge">CHAT</span>');
 
                     let content = `<div class="h-response"><strong>Result:</strong> ${escapeHtml(item.response.text)}</div>`;
 
-                    // Add details toggle for workflows
+                    // Add details toggle for workflows/tools
                     if (item.full_context) {
                         const details = JSON.stringify(item.full_context, null, 2);
                         content += `

@@ -86,6 +86,10 @@
                     <i data-lucide="bar-chart-3"></i>
                     <span>Telemetry</span>
                 </button>
+                <a href="/database" class="nav-item" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; transition: all 0.3s ease;">
+                    <i data-lucide="database"></i>
+                    <span>Database</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -147,7 +151,14 @@
                                 <button id="run-flow-btn" class="icon-btn primary"><i data-lucide="play"></i>
                                     Run</button>
                                 <button id="export-flow-btn" class="icon-btn"><i data-lucide="download"></i>
-                                    Export</button>
+                                    Export JSON</button>
+                                <input id="csv-file-input" type="file" accept=".csv" class="hidden" />
+                                <button id="csv-select-btn" class="icon-btn"><i data-lucide="upload"></i> CSV</button>
+                                <select id="csv-input-column" class="glass-input hidden"></select>
+                                <button id="run-csv-btn" class="icon-btn primary hidden"><i data-lucide="play"></i> Run CSV</button>
+                                <button id="download-run-txt-btn" class="icon-btn hidden"><i data-lucide="file-text"></i> Output</button>
+                                <input id="json-import-input" type="file" accept=".json" class="hidden" />
+                                <button id="import-json-btn" class="icon-btn"><i data-lucide="file-up"></i> Import JSON</button>
                             </div>
                         </div>
 
@@ -242,6 +253,20 @@
                 <header class="content-header">
                     <h2>Conversation History</h2>
                 </header>
+                <div class="traces-container" style="margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                        <h3 style="margin:0;">Batch Jobs (CSV Runs)</h3>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label style="opacity:0.9;">Rows</label>
+                            <select id="batch-runs-limit" class="glass-input">
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                            </select>
+                            <button id="refresh-batch-runs-btn" class="icon-btn"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div id="batch-runs-list" class="traces-list"></div>
+                </div>
                 <div id="history-list" class="history-list">
                     <!-- History items will be injected here -->
                 </div>
@@ -274,6 +299,21 @@
                             <h3 id="m-provider">NVIDIA</h3>
                         </div>
                     </div>
+                </div>
+
+                <div class="traces-container">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                        <h3 style="margin:0;">Telemetry Events</h3>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label style="opacity:0.9;">Rows</label>
+                            <select id="telemetry-limit" class="glass-input">
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                            </select>
+                            <button id="refresh-telemetry-btn" class="icon-btn"><i data-lucide="refresh-cw"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div id="telemetry-list" class="traces-list"></div>
                 </div>
 
                 <div class="traces-container">

@@ -10,7 +10,14 @@ WORKFLOW_DEFINITION = {
         {
             "id": 1768127494038,
             "name": "Step 4",
-            "prompt": "Process output from previous step..."
+            "prompt": "Process output from previous step...",
+            "enable_tool": true,
+            "tools": [
+                {
+                    "type": "google_search",
+                    "query": "{{input}}"
+                }
+            ]
         },
         {
             "id": 1768127499889,
