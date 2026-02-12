@@ -26,6 +26,7 @@
             <div class="auth-tabs">
                 <button class="tab-btn active" data-provider="nvidia">NVIDIA API</button>
                 <button class="tab-btn" data-provider="gemini">Google Gemini</button>
+                <button class="tab-btn" data-provider="azure_openai">Azure OpenAI</button>
             </div>
 
             <div class="form-container">
@@ -47,6 +48,28 @@
                         <label>Gemini API Key</label>
                         <input type="password" id="gemini-api-key" placeholder="AIzaSy..." class="glass-input">
                     </div>
+                </div>
+
+                <div id="azure_openai-fields" class="provider-fields">
+                    <div class="input-group">
+                        <label>Azure API Key</label>
+                        <input type="password" id="azure-api-key" placeholder="your-azure-key..." class="glass-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Azure Endpoint</label>
+                        <input type="text" id="azure-endpoint" placeholder="https://your-resource.openai.azure.com/" class="glass-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Deployment Name</label>
+                        <input type="text" id="azure-deployment-name" placeholder="gpt-4" class="glass-input">
+                    </div>
+                    <div class="input-group">
+                        <label>API Version</label>
+                        <input type="text" id="azure-api-version" value="2024-02-01" class="glass-input">
+                    </div>
+                    <button id="test-connection-btn" class="secondary-btn" type="button">
+                        <i data-lucide="wifi"></i> Test Connection
+                    </button>
                 </div>
 
                 <button id="validate-btn" class="primary-btn">
@@ -90,6 +113,10 @@
                     <i data-lucide="database"></i>
                     <span>Database</span>
                 </a>
+                <button class="nav-item" data-view="memory">
+                    <i data-lucide="brain"></i>
+                    <span>Memory</span>
+                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -325,6 +352,51 @@
             </div>
         </section>
     </main>
+
+    <!-- Memory View -->
+    <div id="memory-view" class="view">
+        <header class="content-header">
+            <div class="title-group">
+                <h2>Memory & Context</h2>
+                <p>Retrieve and use stored LLM outputs in workflows</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button id="refresh-memory-btn" class="icon-btn"><i data-lucide="refresh-cw"></i> Refresh</button>
+                <button id="clear-memory-btn" class="icon-btn danger"><i data-lucide="trash-2"></i> Clear All</button>
+            </div>
+        </header>
+
+        <div class="memory-controls">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <input type="text" id="memory-search-input" placeholder="Search memory..." class="glass-input" style="flex:1;">
+                <select id="memory-workflow-filter" class="glass-input">
+                    <option value="">All Workflows</option>
+                </select>
+                <select id="memory-limit" class="glass-input">
+                    <option value="10">10 entries</option>
+                    <option value="25">25 entries</option>
+                    <option value="50">50 entries</option>
+                </select>
+                <button id="search-memory-btn" class="icon-btn primary"><i data-lucide="search"></i> Search</button>
+            </div>
+        </div>
+
+        <div class="memory-list">
+            <h3>Stored Memories</h3>
+            <div id="memory-items" class="memory-items">
+                <!-- Memory items will be loaded here -->
+            </div>
+        </div>
+
+        <div class="memory-preview">
+            <h3>Memory for Prompt ({{memory}} variable)</h3>
+            <div style="display:flex; gap:10px;">
+                <button id="insert-memory-btn" class="icon-btn primary"><i data-lucide="plus"></i> Insert into Step</button>
+                <button id="copy-memory-btn" class="icon-btn"><i data-lucide="copy"></i> Copy to Clipboard</button>
+            </div>
+            <textarea id="memory-preview-text" readonly class="memory-textarea" placeholder="Selected memory will appear here..."></textarea>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

@@ -38,6 +38,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Test Connection Button
+    const testConnectionBtn = document.getElementById('test-connection-btn');
+    if (testConnectionBtn) {
+        testConnectionBtn.addEventListener('click', async () => {
+            const apiKey = document.getElementById(`${currentProvider}-api-key`)?.value;
+            if (!apiKey) {
+                showError('API Key is required');
+                return;
+            }
+
+            testConnectionBtn.disabled = true;
+            testConnectionBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Testing...';
+
+            const payload = {
+                provider: currentProvider,
+                api_key: apiKey
+            };
+
+            // Add provider-specific fields
+            if (currentProvider === 'nvidia') {
+                payload.base_url = document.getElementById('nvidia-base-url')?.value || 'https://integrate.api.nvidia.com/v1';
+            } else if (currentProvider === 'azure_openai') {
+                payload.endpoint = document.getElementById('azure-endpoint')?.value;
+                payload.deployment_name = document.getElementById('azure-deployment-name')?.value;
+                payload.api_version = document.getElementById('azure-api-version')?.value || '2024-02-01';
+            } else if (currentProvider === 'gemini') {
+                payload.model = 'gemini-2.0-flash-exp';
+            }
+
+            try {
+                const response = await fetch('/api/provider/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    appendLog('system', `✓ Connection successful! Response: "${data.response?.substring(0, 100) || 'OK'}..."`);
+                } else {
+                    showError(data.error || 'Connection failed');
+                }
+            } catch (err) {
+                showError('Network error occurred');
+            } finally {
+                testConnectionBtn.disabled = false;
+                testConnectionBtn.innerHTML = '<i data-lucide="wifi"></i> Test Connection';
+                lucide.createIcons();
+            }
+        });
+    }
+
     // Validate Credentials
     validateBtn.addEventListener('click', async () => {
         const apiKey = document.getElementById(`${currentProvider}-api-key`).value;
@@ -48,19 +101,42 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // For Azure, validate required fields
+        if (currentProvider === 'azure_openai') {
+            const endpoint = document.getElementById('azure-endpoint')?.value;
+            const deploymentName = document.getElementById('azure-deployment-name')?.value;
+            if (!endpoint) {
+                showError('Azure Endpoint is required');
+                return;
+            }
+            if (!deploymentName) {
+                showError('Deployment Name is required');
+                return;
+            }
+        }
+
         validateBtn.disabled = true;
         validateBtn.innerHTML = '<span>Validating...</span>';
         authError.textContent = '';
 
         try {
+            const payload = {
+                provider: currentProvider,
+                api_key: apiKey,
+                base_url: baseUrl
+            };
+
+            // Add Azure-specific fields
+            if (currentProvider === 'azure_openai') {
+                payload.endpoint = document.getElementById('azure-endpoint')?.value;
+                payload.deployment_name = document.getElementById('azure-deployment-name')?.value;
+                payload.api_version = document.getElementById('azure-api-version')?.value || '2024-02-01';
+            }
+
             const response = await fetch('/api/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    provider: currentProvider,
-                    api_key: apiKey,
-                    base_url: baseUrl
-                })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -174,6 +250,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Workflow logic
+    window.updateStepProvider = (stepId, providerType) => {
+        const step = workflowSteps.find(s => s.id === stepId);
+        if (!step) return;
+
+        if (!providerType) {
+            delete step.provider_config;
+        } else {
+            step.provider_config = step.provider_config || {};
+            step.provider_config.provider = providerType;
+        }
+        renderWorkflowSteps();
+    };
+
+    window.updateStepProviderField = (stepId, field, value) => {
+        const step = workflowSteps.find(s => s.id === stepId);
+        if (!step) return;
+
+        if (!step.provider_config) step.provider_config = {};
+        step.provider_config[field] = value;
+    };
+
+    window.testStepProvider = async (stepId) => {
+        const step = workflowSteps.find(s => s.id === stepId);
+        if (!step || !step.provider_config) return;
+
+        const providerConfig = step.provider_config;
+        const response = await fetch('/api/provider/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(providerConfig)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            appendLog('system', `✓ Connection successful for step "${step.name}": ${data.response?.substring(0, 100) || 'OK'}...`);
+        } else {
+            appendLog('error', `✗ Connection failed for step "${step.name}": ${data.error || 'Unknown error'}`);
+        }
+    };
+
     function renderWorkflowSteps() {
         const container = document.getElementById('steps-container');
 
@@ -183,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Previous steps: {{stepN}} or {{StepName}}
             // Note: If parallel to previous, technically shouldn't access previous, but we show all for simplicity
 
-            const vars = ['{{input}}'];
+            const vars = ['{{input}}', '{{memory}}'];
             for (let i = 0; i < idx; i++) {
                 const pStep = workflowSteps[i];
                 // Prioritize Name over Step N to avoid duplicates
@@ -205,6 +321,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const tool0 = tools[0] || { type: 'google_search', query_template: '{{input}}', max_results: 5 };
             const toolQuery = tool0.query_template || tool0.query || '{{input}}';
             const toolMax = (tool0.max_results === undefined || tool0.max_results === null) ? 5 : tool0.max_results;
+
+            // Provider selection
+            const providerConfig = step.provider_config || {};
+            const selectedProvider = providerConfig.provider || '';
 
             return `
             <div class="step-card ${step.parallel ? 'parallel-step' : ''}" id="step-card-${step.id}">
@@ -234,6 +354,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="step-card-body">
+                    <div class="step-provider-config">
+                        <label>Provider:</label>
+                        <select onchange="window.updateStepProvider(${step.id}, this.value)">
+                            <option value="">Use Session Default</option>
+                            <option value="nvidia" ${selectedProvider === 'nvidia' ? 'selected' : ''}>NVIDIA API</option>
+                            <option value="azure_openai" ${selectedProvider === 'azure_openai' ? 'selected' : ''}>Azure OpenAI</option>
+                            <option value="gemini" ${selectedProvider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
+                        </select>
+                        ${selectedProvider ? `<button type="button" class="icon-btn small" onclick="window.testStepProvider(${step.id})"><i data-lucide="wifi"></i> Test</button>` : ''}
+
+                        <div id="provider-fields-${step.id}" class="provider-fields-inline">
+                            ${selectedProvider === 'azure_openai' ? `
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+                                    <input class="glass-input" type="text" value="${providerConfig.endpoint || ''}" placeholder="Azure Endpoint" onchange="window.updateStepProviderField(${step.id}, 'endpoint', this.value)" />
+                                    <input class="glass-input" type="text" value="${providerConfig.deployment_name || ''}" placeholder="Deployment Name" onchange="window.updateStepProviderField(${step.id}, 'deployment_name', this.value)" />
+                                </div>
+                                <input class="glass-input" type="text" value="${providerConfig.model || ''}" placeholder="Model (optional)" onchange="window.updateStepProviderField(${step.id}, 'model', this.value)" />
+                            ` : ''}
+                            ${selectedProvider && selectedProvider !== 'azure_openai' ? `
+                                <input class="glass-input" type="text" value="${providerConfig.model || ''}" placeholder="Model (optional)" onchange="window.updateStepProviderField(${step.id}, 'model', this.value)" />
+                            ` : ''}
+                        </div>
+                    </div>
+
                     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
                         <label class="step-toggle ${enableLLM ? 'active' : ''}" title="Enable/Disable LLM call for this step">
                             <input type="checkbox" ${enableLLM ? 'checked' : ''} onchange="window.toggleEnableLLM(${step.id}, this.checked)">
@@ -1180,6 +1324,182 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             list.innerHTML = '<p class="error">Failed to load history.</p>';
         }
+    }
+
+    // --- Memory Management ---
+
+    let selectedMemoryId = null;
+
+    async function loadMemory() {
+        const limit = document.getElementById('memory-limit')?.value || 10;
+        const workflowId = document.getElementById('memory-workflow-filter')?.value || null;
+
+        try {
+            const response = await fetch(`/api/memory/list?limit=${limit}${workflowId ? '&workflow_id=' + workflowId : ''}`);
+            const data = await response.json();
+
+            if (data.success) {
+                renderMemoryItems(data.memories);
+            } else {
+                document.getElementById('memory-items').innerHTML = `<p class="empty">${data.error || 'Failed to load memory'}</p>`;
+            }
+        } catch (err) {
+            appendLog('error', 'Failed to load memory: ' + err.message);
+        }
+    }
+
+    function renderMemoryItems(memories) {
+        const container = document.getElementById('memory-items');
+
+        if (!memories || memories.length === 0) {
+            container.innerHTML = '<p class="empty">No memory entries found.</p>';
+            return;
+        }
+
+        container.innerHTML = memories.map(mem => {
+            const date = new Date(mem.created_at).toLocaleString();
+            const meta = mem.step_name ? `Step ${mem.step_index + 1} (${mem.step_name})` : `Memory`;
+            const workflowInfo = mem.workflow_id ? `<span class="memory-item-meta">Workflow: ${mem.workflow_id.substring(0, 8)}...</span>` : '';
+
+            return `
+                <div class="memory-item" onclick="selectMemory(${mem.id}, '${mem.output_text.replace(/'/g, "\\'")}')" data-memory-id="${mem.id}">
+                    <div class="memory-item-header">
+                        <div>
+                            <div class="memory-item-title">${meta}</div>
+                            <div class="memory-item-meta">${date}</div>
+                        </div>
+                        <button class="icon-btn danger small" onclick="event.stopPropagation(); deleteMemory(${mem.id})">
+                            <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+                        </button>
+                    </div>
+                    <div class="memory-item-content">
+                        ${escapeHtml(mem.output_text.substring(0, 300))}...
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        lucide.createIcons();
+    }
+
+    function selectMemory(id, text) {
+        selectedMemoryId = id;
+
+        // Update selection visual
+        document.querySelectorAll('.memory-item').forEach(el => el.classList.remove('selected'));
+        const selectedItem = document.querySelector(`[data-memory-id="${id}"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+        }
+
+        // Update preview text
+        document.getElementById('memory-preview-text').value = text;
+    }
+
+    async function deleteMemory(id) {
+        if (!confirm('Delete this memory entry?')) return;
+
+        try {
+            const response = await fetch('/api/memory/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workflow_id: null })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                appendLog('system', `Deleted ${data.deleted_count} memory entries`);
+                loadMemory();
+            } else {
+                appendLog('error', data.error || 'Failed to delete memory');
+            }
+        } catch (err) {
+            appendLog('error', 'Failed to delete memory: ' + err.message);
+        }
+    }
+
+    document.getElementById('refresh-memory-btn')?.addEventListener('click', loadMemory);
+
+    document.getElementById('clear-memory-btn')?.addEventListener('click', async () => {
+        if (!confirm('Clear ALL memory entries for this session?')) return;
+
+        try {
+            const response = await fetch('/api/memory/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workflow_id: null })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                appendLog('system', `Cleared ${data.deleted_count} memory entries`);
+                loadMemory();
+            } else {
+                appendLog('error', data.error || 'Failed to clear memory');
+            }
+        } catch (err) {
+            appendLog('error', 'Failed to clear memory: ' + err.message);
+        }
+    });
+
+    document.getElementById('memory-workflow-filter')?.addEventListener('change', loadMemory);
+
+    document.getElementById('memory-limit')?.addEventListener('change', loadMemory);
+
+    document.getElementById('search-memory-btn')?.addEventListener('click', async () => {
+        const query = document.getElementById('memory-search-input')?.value?.trim();
+        if (!query) {
+            appendLog('system', 'Please enter a search query');
+            return;
+        }
+
+        try {
+            const limit = document.getElementById('memory-limit')?.value || 20;
+            const response = await fetch(`/api/memory/search?query=${encodeURIComponent(query)}&limit=${limit}`);
+            const data = await response.json();
+
+            if (data.success) {
+                renderMemoryItems(data.memories);
+                appendLog('system', `Found ${data.count} memory entries matching "${query}"`);
+            } else {
+                appendLog('error', data.error || 'Memory search failed');
+            }
+        } catch (err) {
+            appendLog('error', 'Failed to search memory: ' + err.message);
+        }
+    });
+
+    document.getElementById('insert-memory-btn')?.addEventListener('click', async () => {
+        const previewText = document.getElementById('memory-preview-text').value;
+        if (!previewText) {
+            appendLog('system', 'No memory selected to insert');
+            return;
+        }
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(previewText);
+        appendLog('system', 'Memory text copied to clipboard! Paste it into any workflow step prompt.');
+    });
+
+    document.getElementById('copy-memory-btn')?.addEventListener('click', () => {
+        const previewText = document.getElementById('memory-preview-text').value;
+        if (!previewText) {
+            appendLog('system', 'No memory to copy');
+            return;
+        }
+
+        navigator.clipboard.writeText(previewText);
+        appendLog('system', 'Memory text copied to clipboard!');
+    });
+
+    // Auto-load memory when switching to memory view
+    const memoryViewBtn = document.querySelector('[data-view="memory"]');
+    if (memoryViewBtn) {
+        memoryViewBtn.addEventListener('click', () => {
+            setTimeout(() => loadMemory(), 100);
+        });
     }
 
     // --- Session Management ---

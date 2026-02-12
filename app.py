@@ -1211,6 +1211,90 @@ def workflow_import_json():
     return jsonify({'success': True, 'workflow': definition})
 
 
+@app.route('/api/memory/store', methods=['POST'])
+def store_memory():
+    """Store LLM output to memory"""
+    session_id = session.get('session_id')
+    if not session_id or session_id not in active_agents:
+        return jsonify({'success': False, 'error': 'No valid session'}), 401
+
+    data = request.json
+    output_text = data.get('output_text', '')
+    input_text = data.get('input_text', '')
+    workflow_id = data.get('workflow_id')
+    step_index = data.get('step_index')
+    step_name = data.get('step_name')
+
+    if not output_text:
+        return jsonify({'success': False, 'error': 'output_text is required'}), 400
+
+    try:
+        memory_db = get_memory_db()
+
+        # Get provider and model info from session
+        agent_data = active_agents[session_id]
+        provider_type = agent_data['default_provider']
+        provider = agent_data['providers'][provider_type]['provider_obj']
+        model = provider.config.get('model', '')
+
+        memory_id = memory_db.store(
+            session_id=session_id,
+            input_text=input_text,
+            output_text=output_text,
+            workflow_id=workflow_id,
+            step_index=step_index,
+            step_name=step_name,
+            provider=provider_type,
+            model=model,
+            tags=data.get('tags')
+        )
+
+        return jsonify({
+            'success': True,
+            'memory_id': memory_id,
+            'message': 'Memory stored successfully'
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/memory/list', methods=['GET'])
+def list_memory():
+    """List all memory entries with pagination"""
+    session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({'success': False, 'error': 'session_id required'}), 400
+
+    try:
+        memory_db = get_memory_db()
+
+        workflow_id = request.args.get('workflow_id')
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+
+        memories = memory_db.retrieve(
+            session_id=session_id,
+            workflow_id=workflow_id,
+            limit=limit,
+            offset=offset
+        )
+
+        # Get total count
+        all_memories = memory_db.retrieve(session_id=session_id, workflow_id=workflow_id, limit=1000)
+
+        return jsonify({
+            'success': True,
+            'memories': memories,
+            'total': len(all_memories),
+            'limit': limit,
+            'offset': offset
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/telemetry', methods=['GET'])
 def get_telemetry():
     session_id = session.get('session_id')

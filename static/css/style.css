@@ -855,6 +855,146 @@ textarea {
     gap: 12px;
 }
 
+.step-provider-config {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.step-provider-config select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.step-provider-config select:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.step-provider-config select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.provider-fields-inline {
+    width: 100%;
+    display: grid;
+    gap: 8px;
+}
+
+.provider-fields-inline .glass-input {
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+#test-connection-btn {
+    margin-top: 10px;
+    width: 100%;
+}
+
+/* Memory View Styles */
+.memory-controls {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.memory-list {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.memory-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.memory-item {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.memory-item:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.memory-item.selected {
+    border-color: var(--primary);
+    background: rgba(var(--primary), 0.1);
+}
+
+.memory-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.memory-item-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.memory-item-meta {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.memory-preview {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.memory-preview h3 {
+    margin-top: 0;
+}
+
+.memory-textarea {
+    width: 100%;
+    min-height: 200px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 13px;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+
+.memory-preview-actions {
+    display: flex;
+    gap: 10px;
+}
+
 /* Flow Config Panel */
 .flow-config-panel {
     background: rgba(0, 0, 0, 0.2);
