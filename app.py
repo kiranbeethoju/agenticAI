@@ -1295,6 +1295,66 @@ def list_memory():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/memory/delete', methods=['POST', 'DELETE'])
+def delete_memory():
+    """Delete memory entries"""
+    session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({'success': False, 'error': 'session_id required'}), 400
+
+    try:
+        memory_db = get_memory_db()
+        data = request.json if request.method == 'POST' else {}
+        memory_id = data.get('memory_id') or request.args.get('memory_id')
+        workflow_id = data.get('workflow_id') or request.args.get('workflow_id')
+
+        if memory_id:
+            # Delete specific memory entry
+            success = memory_db.delete(memory_id)
+            if success:
+                return jsonify({'success': True, 'message': 'Memory entry deleted'})
+            else:
+                return jsonify({'success': False, 'error': 'Memory entry not found'}), 404
+        elif workflow_id:
+            # Delete all memories for a workflow
+            count = memory_db.delete_by_workflow(workflow_id)
+            return jsonify({'success': True, 'message': f'Deleted {count} memory entries'})
+        else:
+            # Delete all memories for session
+            count = memory_db.delete_by_session(session_id)
+            return jsonify({'success': True, 'message': f'Deleted {count} memory entries'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/memory/search', methods=['GET'])
+def search_memory():
+    """Search memory entries"""
+    session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({'success': False, 'error': 'session_id required'}), 400
+
+    try:
+        memory_db = get_memory_db()
+        query = request.args.get('q', '')
+        limit = int(request.args.get('limit', 50))
+
+        if not query:
+            return jsonify({'success': False, 'error': 'Search query required'}), 400
+
+        memories = memory_db.search(query, session_id=session_id, limit=limit)
+
+        return jsonify({
+            'success': True,
+            'memories': memories,
+            'count': len(memories)
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/telemetry', methods=['GET'])
 def get_telemetry():
     session_id = session.get('session_id')

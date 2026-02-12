@@ -1403,13 +1403,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/memory/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ workflow_id: null })
+                body: JSON.stringify({ memory_id: id })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                appendLog('system', `Deleted ${data.deleted_count} memory entries`);
+                appendLog('system', `Memory entry deleted`);
                 loadMemory();
             } else {
                 appendLog('error', data.error || 'Failed to delete memory');
@@ -1418,6 +1418,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appendLog('error', 'Failed to delete memory: ' + err.message);
         }
     }
+
+    // Make memory functions globally accessible for onclick handlers
+    window.selectMemory = selectMemory;
+    window.deleteMemory = deleteMemory;
 
     document.getElementById('refresh-memory-btn')?.addEventListener('click', loadMemory);
 
@@ -1428,13 +1432,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/memory/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ workflow_id: null })
+                body: JSON.stringify({})
             });
 
             const data = await response.json();
 
             if (data.success) {
-                appendLog('system', `Cleared ${data.deleted_count} memory entries`);
+                appendLog('system', `Cleared ${data.message}`);
                 loadMemory();
             } else {
                 appendLog('error', data.error || 'Failed to clear memory');

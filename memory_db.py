@@ -255,6 +255,35 @@ class MemoryDB:
 
         return deleted_count
 
+    def delete(self, memory_id: int, session_id: Optional[str] = None) -> bool:
+        """
+        Delete a specific memory entry
+
+        Args:
+            memory_id: The ID of the memory entry to delete
+            session_id: Optional session ID for security validation
+
+        Returns:
+            bool: True if deleted, False if not found
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        if session_id:
+            cursor.execute('''
+                DELETE FROM memory WHERE id = ? AND session_id = ?
+            ''', (memory_id, session_id))
+        else:
+            cursor.execute('''
+                DELETE FROM memory WHERE id = ?
+            ''', (memory_id,))
+
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+
+        return deleted
+
     def get_stats(self, session_id: str) -> Dict[str, Any]:
         """
         Get memory statistics for a session
