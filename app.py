@@ -27,6 +27,7 @@ os.makedirs('uploads', exist_ok=True)
 from llm_providers import LLMProviderFactory
 from observability import Observer
 from agent import SimplifiedAgent
+from memory_db import get_memory_db
 
 
 # Simple query helpers for Cassandra
@@ -1264,7 +1265,7 @@ def list_memory():
     """List all memory entries with pagination"""
     session_id = session.get('session_id')
     if not session_id:
-        return jsonify({'success': False, 'error': 'session_id required'}), 400
+        return jsonify({'success': True, 'memories': [], 'total': 0, 'limit': 50, 'offset': 0})
 
     try:
         memory_db = get_memory_db()
